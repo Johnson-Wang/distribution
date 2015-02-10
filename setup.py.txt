@@ -1,0 +1,13 @@
+/usr/local/lib/python2.7/dist-packages/kappa/kappa.py
+/usr/local/lib/python2.7/dist-packages/kappa/__init__.py
+/usr/local/lib/python2.7/dist-packages/kappa/settings.py
+/usr/local/lib/python2.7/dist-packages/kappa/distribution.py
+/usr/local/lib/python2.7/dist-packages/kappa/group_velocity.py
+/usr/local/lib/python2.7/dist-packages/kappa/kappa.pyc
+/usr/local/lib/python2.7/dist-packages/kappa/__init__.pyc
+/usr/local/lib/python2.7/dist-packages/kappa/settings.pyc
+/usr/local/lib/python2.7/dist-packages/kappa/distribution.pyc
+/usr/local/lib/python2.7/dist-packages/kappa/group_velocity.pyc
+/usr/local/lib/python2.7/dist-packages/kappa/_kthin.so
+/usr/local/bin/kappa
+/usr/local/lib/python2.7/dist-packages/distribution-0.1.egg-info

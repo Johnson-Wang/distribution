@@ -1,0 +1,251 @@
+#!/usr/bin/env python
+#This program is aimed to get the  in-plane thermal conductivity of a thin film
+# Copyright (C) 2013 Wang Xinjiang
+# All rights reserved.
+from optparse import OptionParser
+from kappa.settings import file_exists, Settings, print_error_message
+import phonopy.interface.vasp as vasp
+from kappa.kappa import Kbulk, Kthin, Kultrathin
+from kappa.distribution import Distribution, Average
+from kappa.group_velocity import Group_velocity, get_frame
+parser = OptionParser()
+parser.set_defaults(
+    verbose=False,
+    configure=None,
+    quiet=False,
+    temperatures=None,
+    poscar="POSCAR",
+    cutoff_lifetime=1e-4,
+    mesh=None,
+    gv_mesh_shift="0.5 0.5 0.5",
+    gv_shift_file=None,
+    iso_file=None,
+    thick=None,
+    rough=None,
+    cahill_pohl=False,
+    specularity=None,
+    is_num = False,
+    language="C",
+    distribution=None,
+    average = None,
+    band_index=None,
+    sigma=1.0,
+    seg=200,
+    is_log = None,
+    is_cumulative=None,
+    is_plot=False,
+    is_print_kappa=False,
+    is_save=False,
+    is_cal=False,
+    is_scatter=False,
+    is_fix_sigma=False,
+    direction_tensor="xx",
+    direction_vector=None,
+    vfactor=1.0,
+    nosym=False
+)
+parser.add_option("--ts", dest="temperatures", type="string",
+                  help="temperatures chosen for ther kappa in the thin film")
+parser.add_option("-r", dest="configure", type="string",
+                  help="read configuration file")
+parser.add_option("-c","--cal", dest="is_cal", action="store_true",
+                  help="calculate the thermal conductivity instead of using the read one")
+parser.add_option("--num", "--non_uniform_mesh", dest="is_num",
+                  action="store_true",
+                  help="non uniform mesh used for the scattering modification for the thin films")
+parser.add_option("--print_kappa","-k", dest="is_print_kappa", action="store_true",
+                  help="Print the thermal conductivities at different temperatures")
+parser.add_option("-q", "--quiet", dest="quiet",
+                  action="store_true",
+                  help="Print out smallest information")
+parser.add_option("-v", "--verbose", dest="verbose",
+                  action="store_true",
+                  help="Detailed information is shown.")
+parser.add_option("--poscar", dest="poscar",type="string",
+                  help="structure file(default:POSCAR)")
+parser.add_option("--cutlt", "--cutoff_lifetime", dest="cutoff_lifetime",
+                  type="float",
+                  help="Cutoff lifetime in second used for thermal conductivity calculation")
+parser.add_option("--mesh", dest="mesh",
+                  type="string",
+                  help="mesh grid in the three axes")
+parser.add_option("--shift", "--gv_mesh_shift", dest="gv_mesh_shift",
+                  type="string",
+                  help="mesh shift for group velocity calculation(considering the zero gv at symmetry center points)")
+parser.add_option("--gv_file", dest="gv_shift_file",
+                  type="string",
+                  help="shifted group velocity filename")
+parser.add_option("--cp", "--Cahill_Pohl", dest="cahill_pohl", action="store_true",
+                  help="Use Cahill Pohl model to predict thermal conductivity")
+parser.add_option("--iso_file", dest="iso_file",
+                  type="string",
+                  help="isotope scattering rate file(it should have the same dimension with kappa and gv)")
+parser.add_option("--thick", "--thicknesses", dest="thick",
+                  type="string",
+                  help="""A series of thickness values for the thin film (the unit can be specified at last e.g. 300 nm,
+                       the default is unitcell length)""")
+parser.add_option("--rough", "--roughnesses", dest="rough",
+                  type="string",
+                  help="""A series of roughness values for the thin film (the unit can be specified at last e.g. 1 nm,
+                       the default is unitcell length)""")
+parser.add_option("--p","--specularity", dest="specularity",
+                  type="string",
+                  help="Specularity parameter specified manually(exclusive to --rough tag)")
+parser.add_option("--l", "--language", dest="language",
+                  type="string",
+                  help="Choose the language for calculating thermal conductivity(C or python)")
+parser.add_option("--dist", "--distribution", dest="distribution",
+                  type="string",
+                  help="""distribution of a property in regards to another. For example, in case of the input
+                  "frequency | kappa",the x-axis would be frequency and y-axis be kappa. Note that only the
+                  first letter matters, namely F: frequency, K: kappa, M:mean-free-path, R: relaxation time,
+                  N: normal relaxation time, U: Umklapp relaxation time, G: group velocity, C: heat capacity""")
+parser.add_option("--average", dest="average",
+                  type="string",
+                  help="""The average of a property in regards to another, For example, in case of the input
+                  "frequency | kappa", the frequency is normalized using the kappa. Note that only the first letter
+                  matters, namely F: frequency, K: kappa, M: mean-free-path, R: relaxation time, B: Brillouin zone
+                  N: normal relaxation time, U: umklapp relaxation time, G: group velocity, C: heat capacity. The
+                  tool property can only be kappa or Brillouin zone""")
+parser.add_option("--bi", "--band_index", dest="band_index",
+                  type="string",
+                  help="band index used for the distribution, which can help specify modes such as longitudinal acouustic ones")
+parser.add_option("--sigma", dest="sigma",
+                  type=float,
+                  help="Gaussian smotting factor for Gaussian smopthing function(relative value 0-100, real sigma: sigma* (max-min)/100")
+parser.add_option("--seg", "--segmentation", dest="seg",
+                  type=float,
+                  help="segmentations for the property for which the distribution is calculated")
+parser.add_option("-p", dest="is_plot",
+                  action="store_true",
+                  help="plot the distribution function")
+parser.add_option("-a", "--cumulative", dest="is_cumulative",
+                  action="store_true",
+                  help="plot the distribution, especially the thermal conductivity, in a cumulative manner")
+parser.add_option("-s", dest="is_save",
+                  action="store_true",
+                  help="save the distribution fuction")
+parser.add_option("--log",dest="is_log",type="string", help="logarithm axis scale (x, y or xy)")
+parser.add_option("-d","--scatter", dest="is_scatter", action="store_true",help="scattering plot")
+parser.add_option("-f", "--fix_sigma", dest="is_fix_sigma", action = 'store_true', help="fix the smoothing factor")
+parser.add_option("--dirt", dest="direction_tensor", type="string",
+                  help="The direction of thermal conductivity to print out (xx, yy, zz, yz, xz, xy, or x, y, z)")
+parser.add_option("--dirv", dest="direction_vector", type="string",
+                  help="The direction of group velocity to be cast upon (x, y, z)")
+parser.add_option("--vfactor", dest="vfactor", type="float",
+                  help="The ratio of the actual volume to the one calculated using the POSCAR")
+parser.add_option("--nosym", dest="nosym", action="store_true",
+                  help="Apply no symmetry to the system")
+(options, args) = parser.parse_args()
+option_list = parser.option_list
+# Set log level
+log_level = 1
+if options.verbose:
+    log_level = 2
+if options.quiet:
+    log_level = 0
+##########################
+# Parse the reading file #
+##########################
+if len(args) > 0:
+    if file_exists(args[0], log_level):
+        settings= Settings(filename=args[0],
+                           options=options,
+                           option_list=option_list)
+else:
+    settings = Settings(options=options,
+                        option_list=option_list)
+
+if settings._dirv is not None:
+    nosym = True
+else:
+    nosym = settings._nosym
+
+#read structure from POSCAR
+if file_exists(settings._poscar, log_level):
+    unitcell = vasp.read_vasp(settings._poscar)
+frame,a=get_frame(unitcell.get_cell())
+if settings._gv_shift_file is not None:
+    gv=Group_velocity(settings._gv_shift_file, frame=frame)
+else:
+    gv=None
+
+if settings._kappa_mode=="r": # reading kappa files formatted as hdf5
+    kread=Kbulk(filename=settings._filename,
+                ts=settings._temperatures,
+                cutoff_lifetime=settings._cutoff_lifetime,
+                cell=unitcell,
+                mesh=settings._mesh,
+                iso_file = settings._iso_file,
+                volume_factor=settings._vfactor,
+                nosym = nosym,
+                is_cahill_pohl=settings._is_cahill_pohl)
+    if options.is_cal or settings._is_cahill_pohl:
+        kread.calculate_kappa()
+    if options.is_print_kappa:
+        kread.print_kappa(dir=settings._dirt, log_level=log_level)
+if settings._thick is not None:
+    kthin=Kthin(kread,
+                settings._thick,
+                settings._rough,
+                settings._specularity,
+                group_velocity=gv,
+                language=settings._language,
+                direc=settings._dirt,
+                log_level = log_level,
+                thick_unit = settings._thick_unit,
+                rough_unit = settings._rough_unit)
+    kthin.calculate_kappa()
+
+    if log_level == 0:
+        kthin.print_kappa_thin()
+    else:
+        kthin.print_kappa_branch()
+
+
+elif settings._is_num:
+    kut = Kultrathin(kread,
+                     settings._rough,
+                     settings._specularity,
+                     group_velocity = gv,
+                     language = settings._language)
+if settings._aobject is not None: # averaging
+    if settings._kappa_mode=="r":
+        if settings._thick is not None:
+            tc=kthin
+        else:
+            tc=kread
+    else:
+        tc=gv
+        if  settings._atool != "B":
+            print_error_message("The group velocity can only be averaged in The Brillouin zone since kappa is not specified")
+    average = Average(tc=tc,
+                      objects=settings._aobject,
+                      tool=settings._atool,
+                      bi=settings._bi)
+if settings._dist is not None:
+    if settings._kappa_mode=="r":
+        if settings._thick is not None:
+            tc=kthin
+        else:
+            if settings._dirv is not None:
+                kread.set_nosym()
+            tc=kread
+    else:
+        tc=gv
+    dist=Distribution(tc=tc,
+                      distribution=settings._dist,
+                      destination=settings._dest,
+                      bi=settings._bi,
+                      sigma=settings._sigma,
+                      is_fix_sigma = settings._is_fix_sigma,
+                      seg=settings._seg,
+                      language=settings._language,
+                      is_plot=settings._is_plot,
+                      is_save=settings._is_save,
+                      is_log=settings._is_log,
+                      is_scatter=settings._is_scatter,
+                      is_cumulative=settings._is_cumulative,
+                      direct=settings._dirt,
+                      direcv=settings._dirv)
+    dist.cast_fun()
