@@ -76,6 +76,7 @@ class Settings():
         self._is_scatter=False
         self._dirt=(0,0) # thermal conductivity direction tensor
         self._dirv=None # group velocity direciton vector
+        self._dirw = -1 # only for boundary scattering. -1 respresents all directions
         self._vfactor=1.0
         self._nosym = False
         self._thick_unit = None
@@ -208,6 +209,15 @@ class Settings():
                 if d is not None and len(d) >0 :
                     try:
                         self._dirv = int(d.translate(tran)[0])
+                    except ValueError:
+                        print_error_message("The direction can only be set as characters 'x', 'y' and 'z'")
+
+            if opt.dest == "direction_width":
+                d=self._options.direction_width
+                tran=maketrans("xyz", "012")
+                if d is not None and len(d) >0 :
+                    try:
+                        self._dirw = int(d.translate(tran)[0])
                     except ValueError:
                         print_error_message("The direction can only be set as characters 'x', 'y' and 'z'")
 

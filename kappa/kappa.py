@@ -134,9 +134,10 @@ class Kbulk():
                     Symmetry(self._cell).get_pointgroup_operations())
         self._kpoint_operations = get_kpoint_group(self._mesh, self._point_operations)
 
-        (mapping, self._rot_mappings) =get_mappings(self._mesh,
+        (mapping, rot_mappings) =get_mappings(self._mesh,
                                                     Symmetry(self._cell).get_pointgroup_operations(),
                                                     qpoints=np.array([0,0,0],dtype="double"))
+        self._rot_mappings = self._kpoint_operations[rot_mappings]
         self._mapping, self._grid=spg.get_ir_reciprocal_mesh(self._mesh, self._cell)
         assert (self._mapping==mapping).all()
         self._map_to_ir_index=np.zeros_like(mapping)
@@ -185,7 +186,7 @@ class Kbulk():
                     for sub_ele in ele:
                         degeneracy[i, sub_ele]=ele[0]
             kthin.thermal_conductivity(self._kappa,
-                                       self._rot_mappings.copy(),
+                                       self._rot_mappings.copy().astype("intc"),
                                        self._mapping.copy(),
                                        np.linalg.inv(self._cell.get_cell()).copy(),
                                        self._heat_capacity.copy(),
@@ -361,6 +362,7 @@ class Kthin():
     def __init__(self, kbulk,
                  thick,
                  rough=None,
+                 dirw=-1, # direction for the thickness (width)
                  specularity=None,
                  group_velocity=None,
                  language="C",
@@ -390,6 +392,7 @@ class Kthin():
             print "Error! Mesh from gv file is inconsistent with the one from kappa file!"
             sys.exit(1)
         self._thick=thick * self._thick_unit
+        self._dirw = dirw
         self._is_rough=False
         self._rough=None
         self._log_level = log_level
@@ -459,13 +462,17 @@ class Kthin():
         return np.array(gv2_tensor) # dim of gv2: [equivalent_qs ,s, 3,3]
 
     def get_mode_wise_specularity(self, grid_index):
-        return np.exp(-16 * np.pi**3 * self._rough_temp**2 *self._qpoints[grid_index, 2] **2 )
+        return np.exp(-16 * np.pi**3 * self._rough_temp**2 *self._qpoints[grid_index, self._dirw] **2 )
 
     def get_scaling_factor(self, grid_index, tem_index, band_index):
         factors=[]
         thick=self._thick_temp * self._a * Angstrom
+        if self._dirw in [0, 1, 2]:
+            gvs = self._gv[:,:,self._dirw]
+        else:
+            gvs = np.sqrt(np.sum(self._gv ** 2, axis=-1))
         for o in self._reverse_mapping[grid_index]:
-            gv=self._gv[o, band_index, 2] * gv_unit
+            gv=gvs[o, band_index] * gv_unit
             if np.abs(gv)<1e-8:
                 factors.append(1)
                 continue
@@ -552,7 +559,8 @@ class Kthin():
                                      self._heat_capacity.copy(),
                                      self._gv.copy(),
                                      self._cutoff_lifetime,
-                                     np.array(self._dir, dtype="intc"))
+                                     np.array(self._dir, dtype="intc"),
+                                     self._dirw)
         else:
             kt.kappa_thin_film_pconst(self._a,
                                       self._kappa,
@@ -563,7 +571,8 @@ class Kthin():
                                       self._heat_capacity.copy(),
                                       self._gv.copy(),
                                       self._cutoff_lifetime,
-                                      np.array(self._dir, dtype="intc"))
+                                      np.array(self._dir, dtype="intc"),
+                                      self._dirw)
         self._kappa *= self._conversion_factor/ self._weight.sum()
 
     def print_kappa_thin(self):

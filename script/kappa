@@ -41,6 +41,7 @@ parser.set_defaults(
     is_fix_sigma=False,
     direction_tensor="xx",
     direction_vector=None,
+    direction_width=None,
     vfactor=1.0,
     nosym=False
 )
@@ -86,8 +87,11 @@ parser.add_option("--thick", "--thicknesses", dest="thick",
                        the default is unitcell length)""")
 parser.add_option("--rough", "--roughnesses", dest="rough",
                   type="string",
-                  help="""A series of roughness values for the thin film (the unit can be specified at last e.g. 1 nm,
-                       the default is unitcell length)""")
+                  help="""A series of roughness values for the thin film (the unit can be specified following the digit e.g. 1 nm.
+                       The default unit is unitcell length)""")
+parser.add_option("--dirw", dest="direction_width", type="string",
+                  help="""The direction of the width on which the structure is constrained.
+                  (x, y, z, Default: None, denoting a spherical sample)""")
 parser.add_option("--p","--specularity", dest="specularity",
                   type="string",
                   help="Specularity parameter specified manually(exclusive to --rough tag)")
@@ -188,6 +192,7 @@ if settings._thick is not None:
     kthin=Kthin(kread,
                 settings._thick,
                 settings._rough,
+                settings._dirw,
                 settings._specularity,
                 group_velocity=gv,
                 language=settings._language,

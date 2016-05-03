@@ -216,15 +216,16 @@ static void get_kappa_thin_film(const double a,
 			 const double cv[],
 			 const double gv[], 
 			 double cutr,
-			 const int dir[]){
+			 const int dir[],
+			 const int dirw){
   int i,j,k,l,m, n;
   double delta, p,factor;
-  double  *gv_temp;
+  double  *gv_temp, gv_scalar;
   int alpha,beta;
   alpha=dir[0]; beta=dir[1];
   for (i=0;i<nth*nrp*nq*nte*nb;i++)
     kthin[i]=0.;//initialization
-#pragma omp parallel for collapse(5) private(n,delta,p,factor,gv_temp)
+#pragma omp parallel for collapse(5) private(n,delta,p,factor,gv_temp, gv_scalar)
   for (i=0; i<nth;i++){
     for (j=0;j<nrp;j++){
       for (k=0;k<nq;k++){
@@ -235,17 +236,21 @@ static void get_kappa_thin_film(const double a,
 	    if (gamma[n]< 0.5 / cutr / THz)
 	      continue;
 	    gv_temp=gv+k*nb*3+m*3;
-	    if (fabs(gv_temp[2])<1e-16){
+	    if (dirw <= 2 && dirw >=0)
+	      gv_scalar = fabs(gv_temp[dirw]);
+	    else
+	      gv_scalar = sqrt(gv_temp[0]*gv_temp[0]+gv_temp[1]*gv_temp[1]+gv_temp[2]*gv_temp[2]);
+	    if (gv_scalar<1e-16){
 	      factor=1;
 	    }
 	    else{
-	      delta=(2*gamma[n]*2*M_PI*THz) *(thick[i]*a*Angstrom) / fabs(gv_temp[2]*THz*Angstrom);
+	      delta=(2*gamma[n]*2*M_PI*THz) *(thick[i]*a*Angstrom) / (gv_scalar*THz*Angstrom);
  	      if (spec!=NULL){
-		p=spec[j];
- 		factor=delta*(1+p)/ (2*(1-p)+delta*(1+p));
+            p=spec[j];
+            factor=delta*(1+p)/ (2*(1-p)+delta*(1+p));
 	      }
 	      else if (rough!=NULL){
-		p=exp(-16*M_PI*M_PI*M_PI*rough[j]*rough[j]*qpoints[k*3+2]*qpoints[k*3+2]);
+	      	p=exp(-16*M_PI*M_PI*M_PI*rough[j]*rough[j]*qpoints[k*3+2]*qpoints[k*3+2]);
 		
 		if (fabs(p-1)<1e-5) factor=1;
 		else factor=delta*(1+p)/(2*(1-p)+delta*(1+p));
@@ -419,8 +424,8 @@ static PyObject * py_kappa_thin_film_pconst(PyObject *self, PyObject *args)
   PyArrayObject* py_direction;
   double a;
   double cutoff_lifetime;
-
-  if (!PyArg_ParseTuple(args, "dOOOOOOOdO",
+  int dirw;
+  if (!PyArg_ParseTuple(args, "dOOOOOOOdOi",
             &a,
 			&kappa_thin,
 			&py_gamma,
@@ -430,7 +435,8 @@ static PyObject * py_kappa_thin_film_pconst(PyObject *self, PyObject *args)
 			&heat_capacity,
 			&group_velocity,
 			&cutoff_lifetime,
-			&py_direction))
+			&py_direction,
+			&dirw))
     return NULL;
   const int num_thick = (int)kappa_thin->dimensions[0];
   const int num_p = (int)kappa_thin->dimensions[1];
@@ -445,7 +451,7 @@ static PyObject * py_kappa_thin_film_pconst(PyObject *self, PyObject *args)
   const double *gv=(double*)group_velocity->data;
   const double *p=(double*)specularity->data;
   const int *dir = (int*) py_direction->data;
-  
+
   get_kappa_thin_film(a,
 		      kt,
 		      gamma,
@@ -462,7 +468,8 @@ static PyObject * py_kappa_thin_film_pconst(PyObject *self, PyObject *args)
 		      cv,
 		      gv,
 		      cutoff_lifetime,
-		      dir);
+		      dir,
+		      dirw);
   Py_RETURN_NONE;
 }
 
@@ -479,18 +486,20 @@ static PyObject * py_kappa_thin_film_pvary(PyObject *self, PyObject *args)
   PyArrayObject* py_direction;
   double a;
   double cutoff_lifetime;
-  if (!PyArg_ParseTuple(args, "dOOOOOOOOdO",
+  int dirw;
+  if (!PyArg_ParseTuple(args, "dOOOOOOOOdOi",
                         &a,
-			&kappa_thin,
-			&py_gamma,
-			&py_gamma_iso,
-			&thick,
-			&rough,
-			&qpoints,
-			&heat_capacity,
-			&group_velocity,
-			&cutoff_lifetime,
-			&py_direction))
+                        &kappa_thin,
+                        &py_gamma,
+                        &py_gamma_iso,
+                        &thick,
+                        &rough,
+                        &qpoints,
+                        &heat_capacity,
+                        &group_velocity,
+                        &cutoff_lifetime,
+                        &py_direction,
+                        &dirw))
     return NULL;
   const int num_thick = (int)kappa_thin->dimensions[0];
   const int num_rough = (int)kappa_thin->dimensions[1];
@@ -522,7 +531,8 @@ static PyObject * py_kappa_thin_film_pvary(PyObject *self, PyObject *args)
 		      cv,
 		      gv,
 		      cutoff_lifetime,
-		      dir);
+		      dir,
+		      dirw);
   Py_RETURN_NONE;
 }
 
