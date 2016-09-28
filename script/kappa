@@ -137,7 +137,7 @@ parser.add_option("--dirt", dest="direction_tensor", type="string",
 parser.add_option("--dirv", dest="direction_vector", type="string",
                   help="The direction of group velocity to be cast upon (x, y, z)")
 parser.add_option("--vfactor", dest="vfactor", type="float",
-                  help="The ratio of the actual volume to the one calculated using the POSCAR")
+                  help="The ratio of the volume of the structure in POSCAR to the actual one")
 parser.add_option("--nosym", dest="nosym", action="store_true",
                   help="Apply no symmetry to the system")
 (options, args) = parser.parse_args()

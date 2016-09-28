@@ -287,31 +287,31 @@ class Distribution():
                         self._screen = gv
                     if self._property == "M":#mean free path
                         # gv= np.sqrt(np.sum((self._tc._gv **2), axis=-1))[:,self._bi]
-                        gamma=self._tc._gamma[i,j,:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma[i,j,:,k,self._bi])
                         mfp=np.where(gamma>1e-8, gv/ (2 * 2 * np.pi * gamma), 0) # unit in nm
                         self._screen=mfp
                     elif self._property=="R":
-                        gamma=self._tc._gamma[:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma[:,k,self._bi])
                         self._screen=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
                     elif self._property=="N": # normal gamma
-                        gamma=self._tc._gamma_N[:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma_N[:,k,self._bi])
                         self._screen=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0)
                     elif self._property=="U": # Umklapp gamma
-                        gamma=self._tc._gamma_U[:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma_U[:,k,self._bi])
                         self._screen=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0)
                     if self._dest =="K":
                         self._projector=self._tc._kappa[i,j,:,k, self._bi]
                     elif self._dest=="R":# relaxation time distribution
-                        gamma=self._tc._gamma[i,j,:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma[i,j,:,k,self._bi])
                         self._projector=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
                     elif self._dest=="N":# relaxation time distribution
-                        gamma=self._tc._gamma_N[i,j,:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma_N[i,j,:,k,self._bi])
                         self._projector=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
                     elif self._dest=="U":# relaxation time distribution
-                        gamma=self._tc._gamma_U[i,j,:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma_U[i,j,:,k,self._bi])
                         self._projector=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
                     elif self._dest=="M": #mean free path
-                        gamma=self._tc._gamma[i,j,:,k,self._bi]
+                        gamma = np.abs(self._tc._gamma[i,j,:,k,self._bi])
                         mfp=np.where(gamma>1e-8, gv/ (2 * 2 * np.pi * gamma), 0) # unit in nm
                         self._projector=mfp
                     elif self._dest=="C":#heat capacity
@@ -384,32 +384,32 @@ class Distribution():
                 self._screen = gv
             if self._property == "M":#mean free path
                 # gv= np.sqrt(np.sum((self._tc._gv **2), axis=-1))[:,self._bi]
-                gamma=self._tc._gamma[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma[:,k,self._bi])
                 mfp=np.where(gamma>1e-8, gv/ (2*2*np.pi*gamma), 0) # unit in nm
                 self._screen=mfp
             elif self._property=="R":
-                gamma=self._tc._gamma[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma[:,k,self._bi])
                 self._screen=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
             elif self._property=="N":
-                gamma=self._tc._gamma_N[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma_N[:,k,self._bi])
                 self._screen=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
             elif self._property=="U":
-                gamma=self._tc._gamma_U[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma_U[:,k,self._bi])
                 self._screen=np.where(gamma>1e-8, 1/ (2*2*np.pi*gamma), 0) # unit in ps
             if self._dest=="K":
                 self._projector=self._tc._kappa[:,k, self._bi, self._dirt]# considering 6 directions [xx, yy, zz, yz, xz, xy]
             elif self._dest=="R":
-                gamma=self._tc._gamma[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma[:,k,self._bi])
                 self._projector=np.where(gamma>1e-8, 1/(2*2*np.pi*gamma), 0)
             elif self._dest=="N":
-                gamma=self._tc._gamma_N[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma_N[:,k,self._bi])
                 self._projector=np.where(gamma>1e-8, 1/(2*2*np.pi*gamma), 0)
             elif self._dest=="U":
-                gamma=self._tc._gamma_U[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma_U[:,k,self._bi])
                 self._projector=np.where(gamma>1e-8, 1/(2*2*np.pi*gamma), 0)
             elif self._dest=="M":
                 # gv= np.sqrt(np.sum((self._tc._gv **2), axis=-1))[:,self._bi]
-                gamma=self._tc._gamma[:,k,self._bi]
+                gamma = np.abs(self._tc._gamma[:,k,self._bi])
                 mfp=np.where(gamma>1e-8, gv/ (2*2*np.pi*gamma), 0) # unit in nm
                 self._projector=mfp
             elif self._dest=="C":#heat capacity

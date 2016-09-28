@@ -39,7 +39,7 @@ class Kbulk():
                  is_cahill_pohl=False):
         self._ts=ts
         self._cell=cell
-        self._volume = np.abs(self._cell.get_volume()) * volume_factor
+        self._volume = np.abs(self._cell.get_volume()) / volume_factor
         self.set_frame()
         self._point_operations=None
         self._conversion_factor=unit_to_WmK/self._volume
@@ -61,7 +61,7 @@ class Kbulk():
         self._reverse_mapping=None
         self._gv2_tensors=[]
         self._kpt_rotations_at_stars=None
-        self.read(filename, mesh=mesh)
+        self.read(filename, mesh=mesh, vfactor = volume_factor)
         self._iso_gamma=None
         self.set_iso_gamma(iso_file)
         self.set_grid()
@@ -71,7 +71,7 @@ class Kbulk():
         cell=self._cell.get_cell()
         self._frame, self._a =get_frame(cell)
 
-    def read(self, filename, mesh=None): #volume factor is used to determine the actual volume of 2D materials like graphene
+    def read(self, filename, mesh=None, vfactor=1.0): #volume factor is used to determine the actual volume of 2D materials like graphene
         r=h5py.File(filename)
         all_ts=r['temperature'].value
         if self._ts==None:
@@ -86,7 +86,7 @@ class Kbulk():
             "natom in POSCAR:%d, natom in kappa file%d"%(self._natom, self._cell.get_number_of_atoms())
 
         self._gamma=r['gamma'].value[:,t_pos,:]
-        self._kappa=r['kappa'].value[:,t_pos,:]
+        self._kappa=r['kappa'].value[:,t_pos,:] * vfactor
         if mesh==None:
             self._mesh=np.rint([np.power(r['weight'].value.sum(), 1./3.),]*3).astype("intc")
         else:
@@ -105,8 +105,6 @@ class Kbulk():
         if "gamma_N" in r.keys() and "gamma_U" in r.keys():
             self._gamma_N=r['gamma_N'].value[:,t_pos,:]
             self._gamma_U=r['gamma_U'].value[:,t_pos,:]
-        # if self._mesh.prod() != r['weight'].value.sum():
-        #     print_error_message("The mesh type is unrecognized. Currently only equivalent mesh scheme is supported.")
         r.close()
 
     def set_iso_gamma(self, filename):
